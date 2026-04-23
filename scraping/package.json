@@ -1,0 +1,27 @@
+{
+  "name": "job-scraper",
+  "version": "1.0.0",
+  "description": "Job scraping service for Sprout application",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "scrape": "node scraper.js",
+    "test": "node test.js",
+    "postinstall": "echo Skipping Chromium download - will use system Chrome"
+  },
+  "keywords": ["scraping", "jobs", "sprout", "puppeteer"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "puppeteer-core": "^21.6.1",
+    "cheerio": "^1.0.0-rc.12",
+    "axios": "^1.6.2",
+    "node-cron": "^3.0.3",
+    "pg": "^8.11.3"
+  }
+}
