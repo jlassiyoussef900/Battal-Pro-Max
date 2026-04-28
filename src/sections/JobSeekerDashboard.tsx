@@ -358,35 +358,80 @@ export function JobSeekerDashboard() {
           {activeSection === 'cv' && <CVGenerator />}
           {activeSection === 'badges' && <QuizSystem />}
           {activeSection === 'applications' && (
-            <div className="animate-slide-up">
-              <h2 className="text-2xl font-bold mb-6">My Applications</h2>
-              <Card>
-                <CardContent className="p-6">
-                  <div className="space-y-4">
-                    {applications.map((app) => {
-                      const job = matches.find(m => m.job.id === app.jobId)?.job;
-                      const company = mockCompanies.find(c => c.id === job?.companyId);
-                      const appliedDate = app.appliedAt ? new Date(app.appliedAt) : new Date();
-                      return (
-                        <div key={app.id} className="flex items-center justify-between p-4 rounded-lg border border-border/50">
+            <div className="animate-slide-up space-y-6">
+              <div>
+                <h2 className="text-2xl font-bold">My Applications</h2>
+                <p className="text-muted-foreground">{applications.length} application{applications.length !== 1 ? 's' : ''} submitted</p>
+              </div>
+
+              {applications.length > 0 ? (
+                <div className="space-y-4">
+                  {applications.map((app) => {
+                    const job = matches.find(m => m.job.id === app.jobId)?.job;
+                    const company = mockCompanies.find(c => c.id === job?.companyId);
+                    const appliedDate = app.appliedAt ? new Date(app.appliedAt) : new Date();
+                    const statusColors: Record<string, string> = {
+                      new: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+                      shortlisted: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+                      testing: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+                      interview: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+                      offer: 'bg-green-500/20 text-green-400 border-green-500/30',
+                      hired: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+                      rejected: 'bg-red-500/20 text-red-400 border-red-500/30',
+                    };
+                    const statusColor = statusColors[app.status] || 'bg-muted text-muted-foreground';
+                    return (
+                      <Card key={app.id} className="card-hover">
+                        <CardContent className="p-5">
                           <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-                              <Briefcase className="w-5 h-5 text-muted-foreground" />
+                            <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
+                              {company?.logo ? (
+                                <img src={company.logo} alt={company.name} className="w-9 h-9 rounded-lg object-cover" />
+                              ) : (
+                                <Building2 className="w-6 h-6 text-muted-foreground" />
+                              )}
                             </div>
-                            <div>
-                              <p className="font-medium">{job?.title || 'Job Title'}</p>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold truncate">{job?.title || 'Position'}</p>
                               <p className="text-sm text-muted-foreground">
-                                {company?.name || 'Company'} • Applied {appliedDate.toLocaleDateString()}
+                                {company?.name || 'Company'} • {job?.location?.remote ? 'Remote' : (job?.location?.city || 'Location TBD')}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Applied {appliedDate.toLocaleDateString()}
                               </p>
                             </div>
+                            <div className="flex flex-col items-end gap-2">
+                              <Badge className={`capitalize border ${statusColor}`}>{app.status}</Badge>
+                              {job?.salary && (
+                                <span className="text-xs text-muted-foreground">
+                                  ${(job.salary.min / 1000).toFixed(0)}k – ${(job.salary.max / 1000).toFixed(0)}k
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <Badge className="capitalize">{app.status}</Badge>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
+                          {app.notes && (
+                            <p className="mt-3 text-sm text-muted-foreground border-t border-border/50 pt-3">{app.notes}</p>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="p-16 text-center">
+                    <div className="w-20 h-20 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4">
+                      <Briefcase className="w-10 h-10 text-muted-foreground" />
+                    </div>
+                    <h3 className="text-lg font-semibold mb-2">No applications yet</h3>
+                    <p className="text-muted-foreground mb-6">Start applying to jobs from Discover or Liked Jobs.</p>
+                    <Button onClick={() => setActiveSection('jobs')}>
+                      <Search className="w-4 h-4 mr-2" />
+                      Discover Jobs
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           )}
           {activeSection === 'notifications' && (

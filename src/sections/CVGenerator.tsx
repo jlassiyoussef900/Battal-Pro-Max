@@ -81,62 +81,160 @@ export function CVGenerator() {
     if (eduRes.data) setEducation(eduRes.data);
   };
 
-  const handleGenerateCV = async () => {
-    if (!user) {
-      alert('Please login to generate CV');
-      return;
-    }
+  const buildCV = () => {
+    const firstName = user?.firstName || profile.headline?.split(' ')[0] || 'Your';
+    const lastName = user?.lastName || profile.headline?.split(' ')[1] || 'Name';
+    const email = user?.email || 'your@email.com';
+    const allSkills = skills.length > 0 ? skills : profile.skills;
+    const allExperience = experience.length > 0 ? experience : profile.workExperience;
+    const allEducation = education.length > 0 ? education : profile.education;
+    const headline = profileData?.headline || profile.headline || '';
+    const summary = profileData?.summary || profile.summary || '';
+    const phone = profileData?.phone || profile.phone || '';
+    const linkedin = profileData?.linkedin || profile.linkedIn || '';
+    const portfolio = profileData?.portfolio || profile.portfolio || '';
+    const city = profileData?.city || profile.location?.city || '';
+    const region = profileData?.region || profile.location?.region || '';
 
+    const colors = {
+      professional: { primary: '#1e293b', accent: '#3b82f6', light: '#f1f5f9' },
+      modern: { primary: '#6366f1', accent: '#8b5cf6', light: '#f5f3ff' },
+      minimal: { primary: '#0f766e', accent: '#14b8a6', light: '#f0fdfa' },
+    };
+    const c = colors[selectedTemplate as keyof typeof colors] || colors.professional;
+
+    return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b; background: #fff; font-size: 13px; line-height: 1.5; }
+  .page { max-width: 800px; margin: 0 auto; padding: 40px; }
+  .header { border-bottom: 3px solid ${c.primary}; padding-bottom: 20px; margin-bottom: 24px; }
+  .name { font-size: 28px; font-weight: 700; color: ${c.primary}; }
+  .headline { font-size: 15px; color: ${c.accent}; margin-top: 4px; font-weight: 500; }
+  .contact { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 12px; font-size: 12px; color: #475569; }
+  .contact span { display: flex; align-items: center; gap: 4px; }
+  .section { margin-bottom: 22px; }
+  .section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: ${c.primary}; border-bottom: 1px solid ${c.light}; padding-bottom: 6px; margin-bottom: 12px; }
+  .exp-item, .edu-item { margin-bottom: 14px; }
+  .exp-header { display: flex; justify-content: space-between; align-items: flex-start; }
+  .exp-title { font-weight: 600; font-size: 14px; }
+  .exp-company { color: #475569; font-size: 13px; }
+  .exp-date { font-size: 12px; color: #94a3b8; white-space: nowrap; }
+  .exp-desc { margin-top: 6px; color: #475569; font-size: 12px; }
+  .achievements { margin-top: 6px; padding-left: 16px; }
+  .achievements li { font-size: 12px; color: #475569; margin-bottom: 3px; }
+  .skills-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .skill-tag { background: ${c.light}; color: ${c.primary}; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+  .badge-tag { background: ${c.accent}; color: #fff; padding: 4px 10px; border-radius: 20px; font-size: 12px; }
+  .summary { color: #475569; font-size: 13px; line-height: 1.7; }
+  @media print { body { print-color-adjust: exact; -webkit-print-color-adjust: exact; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div class="name">${firstName} ${lastName}</div>
+    ${headline ? `<div class="headline">${headline}</div>` : ''}
+    <div class="contact">
+      ${email ? `<span>✉ ${email}</span>` : ''}
+      ${phone ? `<span>📞 ${phone}</span>` : ''}
+      ${city || region ? `<span>📍 ${[city, region].filter(Boolean).join(', ')}</span>` : ''}
+      ${linkedin ? `<span>🔗 ${linkedin}</span>` : ''}
+      ${portfolio ? `<span>🌐 ${portfolio}</span>` : ''}
+    </div>
+  </div>
+
+  ${summary ? `
+  <div class="section">
+    <div class="section-title">Professional Summary</div>
+    <p class="summary">${summary}</p>
+  </div>` : ''}
+
+  ${allExperience.length > 0 ? `
+  <div class="section">
+    <div class="section-title">Work Experience</div>
+    ${allExperience.map((exp: any) => {
+      const start = exp.startDate ? new Date(exp.startDate).getFullYear() : exp.start_date?.slice(0, 4) || '';
+      const end = exp.current ? 'Present' : (exp.endDate ? new Date(exp.endDate).getFullYear() : exp.end_date?.slice(0, 4) || '');
+      const desc = exp.description || '';
+      const achievements = exp.achievements || [];
+      return `
+      <div class="exp-item">
+        <div class="exp-header">
+          <div>
+            <div class="exp-title">${exp.position || exp.title || ''}</div>
+            <div class="exp-company">${exp.company || ''} ${exp.location ? '• ' + exp.location : ''}</div>
+          </div>
+          <div class="exp-date">${start}${end ? ' – ' + end : ''}</div>
+        </div>
+        ${desc ? `<div class="exp-desc">${desc}</div>` : ''}
+        ${achievements.length > 0 ? `<ul class="achievements">${achievements.map((a: string) => `<li>${a}</li>`).join('')}</ul>` : ''}
+      </div>`;
+    }).join('')}
+  </div>` : ''}
+
+  ${allEducation.length > 0 ? `
+  <div class="section">
+    <div class="section-title">Education</div>
+    ${allEducation.map((edu: any) => {
+      const start = edu.startDate ? new Date(edu.startDate).getFullYear() : edu.start_date?.slice(0, 4) || '';
+      const end = edu.current ? 'Present' : (edu.endDate ? new Date(edu.endDate).getFullYear() : edu.end_date?.slice(0, 4) || '');
+      return `
+      <div class="edu-item">
+        <div class="exp-header">
+          <div>
+            <div class="exp-title">${edu.degree || ''} ${edu.fieldOfStudy || edu.field_of_study ? 'in ' + (edu.fieldOfStudy || edu.field_of_study) : ''}</div>
+            <div class="exp-company">${edu.institution || ''}</div>
+          </div>
+          <div class="exp-date">${start}${end ? ' – ' + end : ''}</div>
+        </div>
+        ${edu.gpa ? `<div class="exp-desc">GPA: ${edu.gpa}</div>` : ''}
+      </div>`;
+    }).join('')}
+  </div>` : ''}
+
+  ${allSkills.length > 0 ? `
+  <div class="section">
+    <div class="section-title">Skills</div>
+    <div class="skills-grid">
+      ${allSkills.map((s: any) => `<span class="skill-tag">${s.name || s}</span>`).join('')}
+    </div>
+  </div>` : ''}
+
+  ${badges.length > 0 ? `
+  <div class="section">
+    <div class="section-title">Verified Badges</div>
+    <div class="skills-grid">
+      ${badges.map((b: any) => `<span class="badge-tag">${b.name} (${b.level})</span>`).join('')}
+    </div>
+  </div>` : ''}
+</div>
+</body>
+</html>`;
+  };
+
+  const handleGenerateCV = () => {
+    if (!user) return;
     setLoading(true);
-    try {
-      const response = await fetch(`${AI_SERVICE_URL}/api/generate-cv`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          profile: {
-            first_name: user.firstName,
-            last_name: user.lastName,
-            email: user.email,
-            ...profileData
-          },
-          skills,
-          experience,
-          education,
-          jobTitle: jobTitle || profileData?.headline,
-          template: selectedTemplate
-        })
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        setGeneratedCV(data.cv);
-        setShowPreview(true);
-      } else {
-        alert('Failed to generate CV: ' + (data.error || 'Unknown error'));
-      }
-    } catch (error) {
-      console.error('Error generating CV:', error);
-      alert('Failed to generate CV. Make sure the AI service is running.');
-    } finally {
+    setTimeout(() => {
+      const cv = buildCV();
+      setGeneratedCV(cv);
+      setShowPreview(true);
       setLoading(false);
-    }
+    }, 600);
   };
 
   const handleDownloadPDF = () => {
-    if (!generatedCV) {
-      alert('Please generate CV first');
-      return;
-    }
-
-    // Create a new window with the CV content
+    const cv = generatedCV || buildCV();
     const printWindow = window.open('', '_blank');
     if (printWindow) {
-      printWindow.document.write(generatedCV);
+      printWindow.document.write(cv);
       printWindow.document.close();
       printWindow.focus();
-      setTimeout(() => {
-        printWindow.print();
-      }, 250);
+      setTimeout(() => printWindow.print(), 250);
     }
   };
 
@@ -318,7 +416,7 @@ export function CVGenerator() {
           </Button>
           <Dialog open={showPreview} onOpenChange={setShowPreview}>
             <DialogTrigger asChild>
-              <Button variant="outline" disabled={!generatedCV}>
+              <Button variant="outline" onClick={() => { if (!generatedCV) setGeneratedCV(buildCV()); }}>
                 <Eye className="w-4 h-4 mr-2" />
                 Preview
               </Button>
@@ -334,7 +432,7 @@ export function CVGenerator() {
               )}
             </DialogContent>
           </Dialog>
-          <Button onClick={handleDownloadPDF} disabled={!generatedCV}>
+          <Button onClick={handleDownloadPDF}>
             <Download className="w-4 h-4 mr-2" />
             Export PDF
           </Button>

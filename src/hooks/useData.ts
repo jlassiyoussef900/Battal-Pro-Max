@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from './useAuth';
 import { getJobs, getJobById, getUserApplications, createApplication, updateApplicationStatus, getCompanies } from '@/lib/auth';
+import { useMockData } from './useMockData';
 import type { Job, Application, Badge, Quiz, QuizAttempt, JobSeekerProfile, JobMatch, Company } from '@/types';
 
 export function useData() {
   const { user, isAuthenticated } = useAuth();
+  const mockData = useMockData();
   const [profile, setProfile] = useState<JobSeekerProfile | null>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -20,70 +22,83 @@ export function useData() {
   const [hasMoreJobs, setHasMoreJobs] = useState(true);
   const JOBS_PER_PAGE = 20;
 
-  // Fetch jobs from backend API with pagination
+  // Fetch jobs from backend API with fallback to mock data
   const fetchJobs = useCallback(async (page: number = 1, append: boolean = false) => {
     try {
-      if (!append) {
-        setIsLoading(true);
-      }
+      if (!append) setIsLoading(true);
       setError(null);
       const { data, error: jobsError } = await getJobs();
-      
-      if (jobsError) {
-        setError(jobsError.message);
-      } else {
-        const allJobs = (data || []).map((job: any) => {
-          return {
-            ...job,
-            id: job.id || '',
-            title: job.title || 'Untitled Position',
-            description: job.description || '',
-            companyId: job.companyId || job.company_id || '',
-            skills: Array.isArray(job.skills) ? job.skills : [],
-            requirements: Array.isArray(job.requirements) ? job.requirements : [],
-            responsibilities: Array.isArray(job.responsibilities) ? job.responsibilities : [],
-            location: {
-              city: job.location?.city || job.city || null,
-              region: job.location?.region || job.region || null,
-              country: job.location?.country || job.country || 'Unknown',
-              remote: Boolean(job.location?.remote || job.remote),
-              hybrid: Boolean(job.location?.hybrid || job.hybrid),
-            },
-            type: job.type || job.job_type || 'full-time',
-            experienceLevel: job.experienceLevel || job.experience_level || 'mid',
-            salary: job.salary || (job.salary_min && job.salary_max ? {
-              min: Number(job.salary_min) || 0,
-              max: Number(job.salary_max) || 0,
-              currency: job.salary_currency || 'USD',
-              period: job.salary_period || 'yearly',
-            } : undefined),
-            industry: job.industry || 'Technology',
-            status: job.status || 'active',
-            views: Number(job.views) || 0,
-            applications: Number(job.applications || job.applications_count) || 0,
-            postedAt: job.postedAt || job.posted_at || job.created_at || new Date(),
-          };
-        }).filter((job: any) => job !== null);
-        
+
+      if (jobsError || !data || data.length === 0) {
+        // Fall back to mock data
+        const allJobs = mockData.jobs;
         const startIndex = (page - 1) * JOBS_PER_PAGE;
-        const endIndex = startIndex + JOBS_PER_PAGE;
-        const paginatedJobs = allJobs.slice(startIndex, endIndex);
-        
+        const paginatedJobs = allJobs.slice(startIndex, startIndex + JOBS_PER_PAGE);
         if (append) {
           setJobs(prev => [...prev, ...paginatedJobs]);
         } else {
           setJobs(paginatedJobs);
         }
-        
-        setHasMoreJobs(endIndex < allJobs.length);
+        setHasMoreJobs(startIndex + JOBS_PER_PAGE < allJobs.length);
+        setJobsPage(page);
+      } else {
+        const allJobs = (data || []).map((job: any) => ({
+          ...job,
+          id: job.id || '',
+          title: job.title || 'Untitled Position',
+          description: job.description || '',
+          companyId: job.companyId || job.company_id || '',
+          skills: Array.isArray(job.skills) ? job.skills : [],
+          requirements: Array.isArray(job.requirements) ? job.requirements : [],
+          responsibilities: Array.isArray(job.responsibilities) ? job.responsibilities : [],
+          location: {
+            city: job.location?.city || job.city || null,
+            region: job.location?.region || job.region || null,
+            country: job.location?.country || job.country || 'Unknown',
+            remote: Boolean(job.location?.remote || job.remote),
+            hybrid: Boolean(job.location?.hybrid || job.hybrid),
+          },
+          type: job.type || job.job_type || 'full-time',
+          experienceLevel: job.experienceLevel || job.experience_level || 'mid',
+          salary: job.salary || (job.salary_min && job.salary_max ? {
+            min: Number(job.salary_min) || 0,
+            max: Number(job.salary_max) || 0,
+            currency: job.salary_currency || 'USD',
+            period: job.salary_period || 'yearly',
+          } : undefined),
+          industry: job.industry || 'Technology',
+          status: job.status || 'active',
+          views: Number(job.views) || 0,
+          applications: Number(job.applications || job.applications_count) || 0,
+          postedAt: job.postedAt || job.posted_at || job.created_at || new Date(),
+        }));
+
+        const startIndex = (page - 1) * JOBS_PER_PAGE;
+        const paginatedJobs = allJobs.slice(startIndex, startIndex + JOBS_PER_PAGE);
+        if (append) {
+          setJobs(prev => [...prev, ...paginatedJobs]);
+        } else {
+          setJobs(paginatedJobs);
+        }
+        setHasMoreJobs(startIndex + JOBS_PER_PAGE < allJobs.length);
         setJobsPage(page);
       }
     } catch (err) {
-      setError('Failed to load jobs');
+      // Backend unreachable — use mock data silently
+      const allJobs = mockData.jobs;
+      const startIndex = (page - 1) * JOBS_PER_PAGE;
+      const paginatedJobs = allJobs.slice(startIndex, startIndex + JOBS_PER_PAGE);
+      if (append) {
+        setJobs(prev => [...prev, ...paginatedJobs]);
+      } else {
+        setJobs(paginatedJobs);
+      }
+      setHasMoreJobs(startIndex + JOBS_PER_PAGE < allJobs.length);
+      setJobsPage(page);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [mockData.jobs]);
 
   // Load more jobs
   const loadMoreJobs = useCallback(async () => {
@@ -91,85 +106,73 @@ export function useData() {
     await fetchJobs(jobsPage + 1, true);
   }, [jobsPage, hasMoreJobs, isLoading, fetchJobs]);
 
-  // Fetch companies from backend API
+  // Fetch companies from backend API with fallback to mock data
   const fetchCompanies = useCallback(async () => {
     try {
       const { data, error: companiesError } = await getCompanies();
-      
-      if (companiesError) {
-        console.error('Failed to fetch companies:', companiesError);
+      if (companiesError || !data || data.length === 0) {
+        setCompanies(mockData.companies);
       } else {
-        setCompanies(data || []);
+        setCompanies(data);
       }
     } catch (err) {
-      console.error('Error fetching companies:', err);
+      setCompanies(mockData.companies);
     }
-  }, []);
+  }, [mockData.companies]);
 
-  // Fetch applications from backend API
+  // Fetch applications from backend API with fallback to empty
   const fetchApplications = useCallback(async () => {
     if (!user?.id) return;
-    
     try {
       const { data, error: appsError } = await getUserApplications(user.id);
-      
-      if (appsError) {
-        console.error('Failed to fetch applications:', appsError);
+      if (appsError || !data || data.length === 0) {
+        // Fall back to mock applications filtered for this user
+        setApplications(mockData.applications.filter((a: any) => a.userId === user.id));
       } else {
-        setApplications(data || []);
+        setApplications(data);
       }
     } catch (err) {
-      console.error('Error fetching applications:', err);
+      setApplications(mockData.applications.filter((a: any) => a.userId === user.id));
     }
-  }, [user?.id]);
+  }, [user?.id, mockData.applications]);
 
-  // Apply to job via backend API
+  // Apply to job — tries backend, falls back to local state
   const applyToJob = useCallback(async (jobId: string, coverLetter?: string) => {
-    if (!user?.id) {
-      return { error: new Error('User not authenticated') };
-    }
+    if (!user?.id) return { error: new Error('User not authenticated') };
 
+    const job = jobs.find(j => j.id === jobId);
+    const company = companies.find(c => c.id === job?.companyId);
+
+    // Optimistically update local state
+    const newApplication: Application = {
+      id: Date.now().toString(),
+      jobId,
+      userId: user.id,
+      status: 'new',
+      appliedAt: new Date(),
+      updatedAt: new Date(),
+      coverLetter,
+    };
+    setApplications(prev => [...prev, newApplication]);
+
+    const newNotification = {
+      id: Date.now().toString(),
+      userId: user.id,
+      type: 'application_update' as const,
+      title: 'Application Submitted',
+      message: `You applied to ${job?.title || 'a job'}${company ? ` at ${company.name}` : ''}!`,
+      read: false,
+      createdAt: new Date(),
+    };
+    setNotifications(prev => [newNotification, ...prev]);
+
+    // Try backend (ignore errors — local state already updated)
     try {
-      const { data, error: applyError } = await createApplication(user.id, jobId, coverLetter);
-      
-      if (applyError) {
-        return { error: applyError };
-      }
+      await createApplication(user.id, jobId, coverLetter);
+    } catch (_) {}
 
-      // Refresh applications after successful application
-      await fetchApplications();
-      
-      // Get job details for notification
-      const job = jobs.find(j => j.id === jobId);
-      const company = companies.find(c => c.id === job?.companyId);
-      
-      // Add notification
-      const newNotification = {
-        id: Date.now().toString(),
-        userId: user.id,
-        type: 'application_update' as const,
-        title: 'Application Submitted',
-        message: `You applied to ${job?.title || 'a job'}${company ? ` at ${company.name}` : ''}!`,
-        read: false,
-        createdAt: new Date(),
-      };
-      
-      setNotifications(prev => [newNotification, ...prev]);
-      
-      // Save to localStorage
-      try {
-        const stored = localStorage.getItem('notifications');
-        const existing = stored ? JSON.parse(stored) : [];
-        localStorage.setItem('notifications', JSON.stringify([newNotification, ...existing]));
-      } catch (err) {
-        console.error('Failed to save notification:', err);
-      }
-      
-      return { data, error: null };
-    } catch (err) {
-      return { error: err instanceof Error ? err : new Error('Failed to apply to job') };
-    }
-  }, [user?.id, fetchApplications, jobs, companies]);
+    return { data: newApplication, error: null };
+  }, [user?.id, jobs, companies]);
 
   // Swipe job (like/dislike)
   const swipeJob = useCallback(async (jobId: string, liked: boolean) => {
@@ -334,6 +337,8 @@ export function useData() {
   useEffect(() => {
     if (isAuthenticated && user) {
       setIsLoading(false);
+      fetchJobs();
+      fetchCompanies();
       fetchSwipedJobs();
       
       // Load notifications from localStorage

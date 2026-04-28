@@ -61,6 +61,9 @@ export function Settings() {
   const { profile, updateProfile } = useMockData();
   const [activeTab, setActiveTab] = useState('profile');
   const [hasChanges, setHasChanges] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string>(() => {
+    return localStorage.getItem(`avatar_${user?.id}`) || user?.avatar || '';
+  });
   const [showAddExperience, setShowAddExperience] = useState(false);
   const [showAddEducation, setShowAddEducation] = useState(false);
   const [editingSkill, setEditingSkill] = useState<string | null>(null);
@@ -398,15 +401,40 @@ export function Settings() {
               <div className="flex items-center gap-6">
                 <div className="relative">
                   <Avatar className="w-24 h-24">
-                    <AvatarImage src={user?.avatar} />
+                    <AvatarImage src={avatarUrl} />
                     <AvatarFallback className="text-2xl">{user?.firstName?.[0]}{user?.lastName?.[0]}</AvatarFallback>
                   </Avatar>
-                  <button className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors">
+                  <button
+                    className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors"
+                    onClick={() => document.getElementById('avatar-upload')?.click()}
+                    type="button"
+                  >
                     <Camera className="w-4 h-4" />
                   </button>
                 </div>
                 <div>
-                  <Button variant="outline" size="sm">
+                  <input
+                    id="avatar-upload"
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      if (file.size > 2 * 1024 * 1024) {
+                        alert('Image must be under 2MB');
+                        return;
+                      }
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        const url = reader.result as string;
+                        setAvatarUrl(url);
+                        localStorage.setItem(`avatar_${user?.id}`, url);
+                      };
+                      reader.readAsDataURL(file);
+                    }}
+                  />
+                  <Button variant="outline" size="sm" onClick={() => document.getElementById('avatar-upload')?.click()} type="button">
                     <Camera className="w-4 h-4 mr-2" />
                     Upload Photo
                   </Button>

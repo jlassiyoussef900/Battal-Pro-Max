@@ -57,6 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       'demo@test.com': { id: '3', role: 'jobseeker', firstName: 'Demo', lastName: 'User' },
       'new@test.com': { id: '4', role: 'jobseeker', firstName: 'New', lastName: 'User' },
       'admin@test.com': { id: '5', role: 'company', firstName: 'Admin', lastName: 'User' },
+      'user6@test.com': { id: '6', role: 'jobseeker', firstName: 'Jordan', lastName: 'Lee' },
     };
     if (mockUsers[email] && password === 'password') {
       const mock = mockUsers[email];
